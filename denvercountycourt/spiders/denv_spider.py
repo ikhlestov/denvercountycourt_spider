@@ -97,7 +97,7 @@ class DenvSpiderSpider(scrapy.Spider):
             self.update_mode = False
         else:
             self.mode = 'udpate_mode'
-            self.days = generate_update_mode_date_list()  ##############DEBUG LIMIT!!!!!!!!!!
+            self.days = generate_update_mode_date_list()
         super(DenvSpiderSpider, self).__init__(*args, **kwargs)
         self.days_generator = self.create_generator()
         self.logger.info("'%s' mode was on", self.mode)
@@ -226,7 +226,7 @@ class DenvSpiderSpider(scrapy.Spider):
             yield h_item
 
             item_links = response.xpath('.//td[@class="case_no"]/a')
-            for link in item_links[:5]: ##############DEBUG LIMIT!!!!!!!!!!
+            for link in item_links:
                 link_name = cond_set_value(link.xpath('.//text()').extract())
                 link_url = cond_set_value(link.xpath('.//@href').extract())
                 meta = {'link_name': link_name,
