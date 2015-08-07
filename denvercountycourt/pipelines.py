@@ -37,5 +37,5 @@ class DenvercountycourtPipeline(object):
                 courtroom=item.get('courtroom', ''),
             )
         session.add(database_item)
-        session.commit()
+        # session.commit()
         return item
