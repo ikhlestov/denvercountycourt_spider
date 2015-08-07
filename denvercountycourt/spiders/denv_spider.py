@@ -114,13 +114,12 @@ class DenvSpiderSpider(scrapy.Spider):
                 yield (date,room)
 
     def parse(self, response):
-        print CAPTCHA_USERNAME, CAPTHCA_PASSWORD
-        # if response.meta.get('return_capthca_was_requested_to_false'):
-        #     self.captcha_was_requested = False
-        # captcha_url = response.xpath('.//img[@id="cimage"]/@src').extract()
-        # if captcha_url:
-        #     if not self.captcha_was_requested:
-        #         return self.create_captcha_request(response)
+        if response.meta.get('return_capthca_was_requested_to_false'):
+            self.captcha_was_requested = False
+        captcha_url = response.xpath('.//img[@id="cimage"]/@src').extract()
+        if captcha_url:
+            if not self.captcha_was_requested:
+                return self.create_captcha_request(response)
 
     def send_request_with_token(self, response):
         if response.meta.get('return_capthca_was_requested_to_false'):
