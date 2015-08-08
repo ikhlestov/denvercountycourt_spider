@@ -203,18 +203,23 @@ class DenvSpiderSpider(scrapy.Spider):
 
     def parse_results(self, response):
         self.logger.info("Handle room {0}".format(response.url))
+        open_in_browser(response)
         x = r"input\[name='code'\]"
         captcha_url = response.xpath('.//img[@id="cimage"]/@src').extract()
         if captcha_url:
+            self.logger.warning("Captha occured again")
             error_capthca_text = re.findall(x, response.body)
             if error_capthca_text:
-                self.logger.warning("captcha was enterd incorect")
+                self.logger.warning("Captcha was entered incorect")
                 # captcha was entered incorect, try again
                 if not self.captcha_was_requested:
                     yield self.create_captcha_request(response)
                 self.delayed_tuples.append(response.meta.get('d_t_tuple'))
             else:
                 d_t_tuple = response.meta.get('d_t_tuple')
+                date, room = d_t_tuple
+                self.logger.info("No any results for {date}:{room}".format(
+                    date=date, room=room))
                 h_item = self.generate_historic_item(d_t_tuple)
                 yield h_item
                 yield self.generate_requests_with_token()
@@ -278,6 +283,4 @@ class DenvSpiderSpider(scrapy.Spider):
         h_item = HistoricItem()
         h_item['courtroom_date'] = date
         h_item['courtroom'] = room
-        self.logger.info("No any results for {date}:{room}".format(
-            date=date, room=room))
         return h_item
