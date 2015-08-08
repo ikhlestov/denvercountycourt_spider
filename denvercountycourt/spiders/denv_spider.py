@@ -145,14 +145,12 @@ class DenvSpiderSpider(scrapy.Spider):
         try:
             d_t_tuple = next(self.days_generator)
         except Exception as e:
-            print(e)
-            print("GENERATOR WAS EMPTY")
-            print("!"*100)
+            self.logger.warning("Generator was empty")
             try:
                 d_t_tuple = self.delayed_tuples.pop()
             except Exception as e:
-                print e
-                print("!"*100)
+                self.logger.warning(e)
+                self.logger.warning("Delayed tuples also empty. Stop crawling")
                 d_t_tuple = None
         if d_t_tuple:
             date, room = d_t_tuple
@@ -172,8 +170,7 @@ class DenvSpiderSpider(scrapy.Spider):
                 room=room,
                 token=token,
             )
-            print("SEND REQUEST TO ROOM")
-            print(url)
+            self.logger.info("Send request to room {0}".format(url))
             return Request(url=url, callback=self.parse_results,
                           meta=meta, dont_filter=True, priority=-3)
 
@@ -205,12 +202,13 @@ class DenvSpiderSpider(scrapy.Spider):
                           priority=5)
 
     def parse_results(self, response):
+        self.logger.info("Handle room {0}".format(response.url))
         x = r"input\[name='code'\]"
         captcha_url = response.xpath('.//img[@id="cimage"]/@src').extract()
         if captcha_url:
             error_capthca_text = re.findall(x, response.body)
             if error_capthca_text:
-                print("captcha was enterd incorect")
+                self.logger.warning("captcha was enterd incorect")
                 # captcha was entered incorect, try again
                 if not self.captcha_was_requested:
                     yield self.create_captcha_request(response)
@@ -236,7 +234,6 @@ class DenvSpiderSpider(scrapy.Spider):
 
             # get items
             table_trs = response.xpath('.//table[@class="case_results"]/tr')
-            print table_trs
             meeting_title = ''
             for tr in table_trs[1:]:
                 text = tr.xpath('.//td[@colspan="5"]/h3/text()').extract()
@@ -264,16 +261,16 @@ class DenvSpiderSpider(scrapy.Spider):
         link_url = response.meta.get('link_url')
         captcha_url = response.xpath('.//img[@id="cimage"]/@src').extract() 
         if captcha_url:
-            print("captcha at parse item\n")
+            self.logger.warning("Captcha at parse item\n")
             # captcha was entered incorect, try again
             if not self.captcha_was_requested:
                 yield self.create_captcha_request(response)
                 yield Request(url=link_url, dont_filter=True,
                               priority=-2, meta=response.meta.copy())
-        print("all is ok at parse item")
         c_item = CaseItem()
         c_item['case_number'] = link_name
-        c_item['html_body'] = cond_set_value(re.findall(r'(<h3>Case Information.*)<aside', response.body, re.DOTALL))
+        c_item['html_body'] = cond_set_value(re.findall(
+            r'(<h3>Case Information.*)<aside', response.body, re.DOTALL))
         yield c_item
 
     def generate_historic_item(self, d_t_tuple):
@@ -281,5 +278,6 @@ class DenvSpiderSpider(scrapy.Spider):
         h_item = HistoricItem()
         h_item['courtroom_date'] = date
         h_item['courtroom'] = room
-        self.logger.info("no any results for {date}:{room}".format(date=date, room=room))
+        self.logger.info("No any results for {date}:{room}".format(
+            date=date, room=room))
         return h_item

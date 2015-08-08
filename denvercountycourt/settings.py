@@ -35,6 +35,7 @@ DATABASE = {
     }
 }
 
+LOG_LEVEL = 'INFO'
 try:
     from settings_local import *
 except:
