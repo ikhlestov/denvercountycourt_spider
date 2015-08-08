@@ -61,32 +61,37 @@ class DenvSpiderSpider(scrapy.Spider):
 
     token = None
 
+    # List for (date,room) tuples with incorrect-expired captcha
     delayed_tuples = []
+    # List for (date,room) tuples with no any results first time
+    # because sometimes server side may fail to return right results
+    try_again_tuples = []
 
     rooms = [
-        "100K",
-        "100KN",
-        "104",
-        "104BN",
-        "105A",
-        "105AN",
-        "159",
-        "164",
-        "175",
-        "186",
-        "2100",
-        "2300",
-        "3A",
-        "3B",
-        "3C",
-        "3D",
-        "3E",
-        "3F",
-        "3G",
-        "3H",
-        "4A",
-        "4C",
+        '3A',
+        '100K',
+        '2300',
+        '4A',
+        '105AN',
+        '164',
+        '4C',
+        '3H',
+        '3B',
+        '2100',
+        '104',
+        '100KN',
+        '186',
+        '159',
+        '3G',
+        '3F',
+        '3E',
+        '175',
+        '104BN',
+        '3C',
+        '3D',
+        '105A'
     ]
+
     def __init__(self, update_mode=False, historic_mode=False,
                  *args, **kwargs):
         self.days = None
@@ -203,25 +208,36 @@ class DenvSpiderSpider(scrapy.Spider):
 
     def parse_results(self, response):
         self.logger.info("Handle room {0}".format(response.url))
-        open_in_browser(response)
         x = r"input\[name='code'\]"
         captcha_url = response.xpath('.//img[@id="cimage"]/@src').extract()
         if captcha_url:
-            self.logger.warning("Captha occured again")
+            self.logger.warning("Captha was found at room again")
             error_capthca_text = re.findall(x, response.body)
             if error_capthca_text:
                 self.logger.warning("Captcha was entered incorect")
-                # captcha was entered incorect, try again
+                # Case 1: captcha was entered incorrect or token expired
                 if not self.captcha_was_requested:
                     yield self.create_captcha_request(response)
                 self.delayed_tuples.append(response.meta.get('d_t_tuple'))
             else:
+                # Case 2: no any results
                 d_t_tuple = response.meta.get('d_t_tuple')
                 date, room = d_t_tuple
-                self.logger.info("No any results for {date}:{room}".format(
-                    date=date, room=room))
-                h_item = self.generate_historic_item(d_t_tuple)
-                yield h_item
+                if d_t_tuple in self.try_again_tuples:
+                    self.logger.info("No any results for {date}:{room} again."
+                        " Assume that there are really no any results".format(
+                        date=date, room=room))
+                    # The same url fail again - let's believe that
+                    # there are no any results for that date
+                    h_item = self.generate_historic_item(d_t_tuple)
+                    yield h_item
+                else:
+                    # First time no results were found on result page
+                    self.try_again_tuples.append(d_t_tuple)
+                    self.delayed_tuples.append(d_t_tuple)
+                    self.logger.info("No any results for {date}:{room} first "
+                        "time occurred. Try again same url later".format(
+                        date=date, room=room))
                 yield self.generate_requests_with_token()
         else:
             d_t_tuple = response.meta.get('d_t_tuple')
@@ -266,7 +282,7 @@ class DenvSpiderSpider(scrapy.Spider):
         link_url = response.meta.get('link_url')
         captcha_url = response.xpath('.//img[@id="cimage"]/@src').extract() 
         if captcha_url:
-            self.logger.warning("Captcha at parse item\n")
+            self.logger.warning("Captcha at parse item")
             # captcha was entered incorect, try again
             if not self.captcha_was_requested:
                 yield self.create_captcha_request(response)
