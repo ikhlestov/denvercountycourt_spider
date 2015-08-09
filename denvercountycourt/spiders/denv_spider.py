@@ -21,6 +21,10 @@ DEFAULT_TIMEOUT = 60
 cond_set_value = lambda y, default=0: y[0] if y else default
 
 def generate_historic_mode_date_list():
+    """
+    Create generator for past 3 days, today, and next 7 days
+    not including holidays.
+    """
     d1 = date(1986, 1, 1)
     date_now = datetime.now()
     d2 = date(date_now.year, date_now.month, date_now.day)
@@ -29,6 +33,9 @@ def generate_historic_mode_date_list():
     return generator
 
 def generate_update_mode_date_list():
+    """Create generator for all available dates from 1986 till today
+    not including holidays.
+    """
     today = datetime.now()
     days = []
     for i in reversed(range(1, 4)):
@@ -114,6 +121,8 @@ class DenvSpiderSpider(scrapy.Spider):
         self.session = self.Session()
 
     def create_generator(self):
+        """Return generator for all available dates,rooms pair.
+        """
         for date in self.days:
             for room in self.rooms:
                 yield (date,room)
@@ -127,6 +136,9 @@ class DenvSpiderSpider(scrapy.Spider):
                 return self.create_captcha_request(response)
 
     def send_request_with_token(self, response):
+        """Extract captcha-session token from url and generate
+        request with it
+        """
         if response.meta.get('return_capthca_was_requested_to_false'):
             self.captcha_was_requested = False
         captcha_url = response.xpath('.//img[@id="cimage"]/@src').extract()
@@ -180,6 +192,9 @@ class DenvSpiderSpider(scrapy.Spider):
                           meta=meta, dont_filter=True, priority=-3)
 
     def create_captcha_request(self,response):
+        """Create request to captcha picture to solve it if
+        no previous request at the same time was made.
+        """
         self.captcha_was_requested = True
         captcha_url = response.xpath('.//img[@id="cimage"]/@src').extract()
         captcha_url = captcha_url[0]
@@ -189,6 +204,9 @@ class DenvSpiderSpider(scrapy.Spider):
                       meta=meta, priority=5)
 
     def handle_captcha(self, response):
+        """Solve captcha with deathbycaptcha service and after
+        send POST request to site to approve solved captcha.
+        """
         form_data = {
             'searchtype':'searchdocket',
             'date':'05/07/2015',
@@ -295,6 +313,9 @@ class DenvSpiderSpider(scrapy.Spider):
         yield c_item
 
     def generate_historic_item(self, d_t_tuple):
+        """Store room,date pair to database because it was already fetched.
+        Used after for historic_mode only.
+        """
         date, room = d_t_tuple
         h_item = HistoricItem()
         h_item['courtroom_date'] = date
