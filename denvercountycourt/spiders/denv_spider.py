@@ -102,7 +102,6 @@ class DenvSpiderSpider(scrapy.Spider):
     def __init__(self, update_mode=False, historic_mode=False,
                  *args, **kwargs):
         self.days = None
-        self.update_mode = True
         if historic_mode:
             self.mode = 'historic_mode'
             self.days = generate_historic_mode_date_list()
@@ -110,6 +109,7 @@ class DenvSpiderSpider(scrapy.Spider):
         else:
             self.mode = 'udpate_mode'
             self.days = generate_update_mode_date_list()
+            self.update_mode = True
         super(DenvSpiderSpider, self).__init__(*args, **kwargs)
         self.days_generator = self.create_generator()
         self.logger.info("'%s' mode was on", self.mode)
@@ -160,14 +160,14 @@ class DenvSpiderSpider(scrapy.Spider):
     def generate_requests_with_token(self):
         token = self.token
         try:
-            d_t_tuple = next(self.days_generator)
+            d_t_tuple = self.delayed_tuples.pop()
         except Exception as e:
-            self.logger.warning("Generator was empty")
+            # self.logger.warning("Delayed tuples was empty.")
             try:
-                d_t_tuple = self.delayed_tuples.pop()
+                d_t_tuple = next(self.days_generator)
             except Exception as e:
                 self.logger.warning(e)
-                self.logger.warning("Delayed tuples also empty. Stop crawling")
+                self.logger.warning("Generator was empty. Stop crawling")
                 d_t_tuple = None
         if d_t_tuple:
             date, room = d_t_tuple
