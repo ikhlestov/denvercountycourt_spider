@@ -1,4 +1,4 @@
-#Spdier for https://www.denvercountycourt.org
+#Spider for https://www.denvercountycourt.org
 
 Spider was build with [Python 2.7](https://www.python.org/) [Scrapy](http://scrapy.org/) framework. It store results in MySQL database through [SQLAlchemy](http://www.sqlalchemy.org/) framework.
 Spider will fetch the site for room/meetings within required dates.
